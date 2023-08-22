@@ -26,6 +26,15 @@ However it is for different PIC32 CPU and also software versions are outdated.
   - installed  [MPLAB Harmony Configurator 3 Plugin][Harmony] - tested
     version 3.3.0.1
 
+NOTE: To make MPLAB X IDE at least partially usable please uncheck this:
+- Tools -> Options -> Miscellaneous -> Files -> Enable auto-scanning of sources
+Otherwise it will hog CPU significantly...
+
+Once you build this project there is also generated assembler listing
+using `xc32-objdump -S` in
+```
+firmware\mplabproj.X\dist\default\TARGET\mplabproj.X.TARGET.lst
+```
 
 [Harmony]: https://www.microchip.com/mplab/mplab-harmony
 [XC compilers]: https://www.microchip.com/mplab/compilers

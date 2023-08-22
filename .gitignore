@@ -7,3 +7,4 @@ dist/
 **/nbproject/private/ 
 *.mk
 *.properties
+.generated_files/

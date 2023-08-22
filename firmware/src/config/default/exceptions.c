@@ -11,9 +11,9 @@
   Description:
     This file redefines the default _weak_  exception handler with a more debug
     friendly one. If an unexpected exception occurs the code will stop in a
-    while(1) loop.  The debugger can be halted and two variables _excep_code and
-    _except_addr can be examined to determine the cause and address where the
-    exception occurred.
+    while(1) loop.  The debugger can be halted and two variables exception_code
+    and exception_address can be examined to determine the cause and address
+    where the exception occurred.
  *******************************************************************************/
 
 // DOM-IGNORE-BEGIN
@@ -40,15 +40,24 @@
 * THAT YOU HAVE PAID DIRECTLY TO MICROCHIP FOR THIS SOFTWARE.
 *******************************************************************************/
 // DOM-IGNORE-END
-
 // *****************************************************************************
 // *****************************************************************************
 // Section: Included Files
 // *****************************************************************************
 // *****************************************************************************
+#include "device.h"
 #include "definitions.h"
 #include <stdio.h>
 
+// *****************************************************************************
+// *****************************************************************************
+// Section: Forward declaration of the handler functions
+// *****************************************************************************
+// *****************************************************************************
+/* MISRAC 2012 deviation block start */
+/* MISRA C-2012 Rule 21.2 deviated 4 times. Deviation record ID -  H3_MISRAC_2012_R_21_2_DR_4 */
+void _general_exception_handler(void);
+void _bootstrap_exception_handler(void);
 
 // *****************************************************************************
 // *****************************************************************************
@@ -67,38 +76,27 @@
     if an exception has occured.
 */
 
-/* Code identifying the cause of the exception (CP0 Cause register). */
-static unsigned int _excep_code;
+/* Exception codes */
+#define EXCEP_IRQ       0U // interrupt
+#define EXCEP_AdEL      4U // address error exception (load or ifetch)
+#define EXCEP_AdES      5U // address error exception (store)
+#define EXCEP_IBE       6U // bus error (ifetch)
+#define EXCEP_DBE       7U // bus error (load/store)
+#define EXCEP_Sys       8U // syscall
+#define EXCEP_Bp        9U // breakpoint
+#define EXCEP_RI        10U // reserved instruction
+#define EXCEP_CpU       11U // coprocessor unusable
+#define EXCEP_Overflow  12U // arithmetic overflow
+#define EXCEP_Trap      13U // trap (possible divide by zero)
+#define EXCEP_IS1       16U // implementation specfic 1
+#define EXCEP_CEU       17U // CorExtend Unuseable
+#define EXCEP_C2E       18U // coprocessor 2
 
 /* Address of instruction that caused the exception. */
-static unsigned int _excep_addr;
+static unsigned int exception_address;
 
-/* Pointer to the string describing the cause of the exception. */
-static char *_cause_str;
-
-/* Array identifying the cause (indexed by _exception_code). */
-static char *cause[] =
-{
-    "Interrupt",
-    "Undefined",
-    "Undefined",
-    "Undefined",
-    "Load/fetch address error",
-    "Store address error",
-    "Instruction bus error",
-    "Data bus error",
-    "Syscall",
-    "Breakpoint",
-    "Reserved instruction",
-    "Coprocessor unusable",
-    "Arithmetic overflow",
-    "Trap",
-    "Reserved",
-    "Reserved",
-    "Reserved",
-    "Reserved",
-    "Reserved"
-};
+/* Code identifying the cause of the exception (CP0 Cause register). */
+static uint32_t  exception_code;
 
 // </editor-fold>
 
@@ -106,27 +104,22 @@ static char *cause[] =
   Function:
     void _general_exception_handler ( void )
 
-  Summary:
-    Overrides the XC32 _weak_ _generic_exception_handler.
-
   Description:
-    This function overrides the XC32 default _weak_ _generic_exception_handler.
+    A general exception is any non-interrupt exception which occurs during program
+    execution outside of bootstrap code.
 
   Remarks:
     Refer to the XC32 User's Guide for additional information.
  */
 
-void _general_exception_handler ( void )
+void __attribute__((noreturn, weak)) _general_exception_handler ( void )
 {
-    /* Mask off Mask of the ExcCode Field from the Cause Register
+    /* Mask off the ExcCode Field from the Cause Register
     Refer to the MIPs Software User's manual */
-    _excep_code = (_CP0_GET_CAUSE() & 0x0000007C) >> 2;
-    _excep_addr = _CP0_GET_EPC();
+    exception_code = ((_CP0_GET_CAUSE() & 0x0000007CU) >> 2U);
+    exception_address = _CP0_GET_EPC();
 
-    _cause_str  = cause[_excep_code];
-    printf("\n\rGeneral Exception %s (cause=%d, addr=%x).\n\r", _cause_str, _excep_code, _excep_addr);
-
-    while (1)
+    while (true)
     {
         #if defined(__DEBUG) || defined(__DEBUG_D) && defined(__XC32)
             __builtin_software_breakpoint();
@@ -134,6 +127,32 @@ void _general_exception_handler ( void )
     }
 }
 
+/*******************************************************************************
+  Function:
+    void _bootstrap_exception_handler ( void )
+
+  Description:
+    A bootstrap exception is any exception which occurs while bootstrap code is
+    running (STATUS.BEV bit is 1).
+
+  Remarks:
+    Refer to the XC32 User's Guide for additional information.
+ */
+
+void __attribute__((noreturn, weak)) _bootstrap_exception_handler(void)
+{
+    /* Mask off the ExcCode Field from the Cause Register
+    Refer to the MIPs Software User's manual */
+    exception_code = (_CP0_GET_CAUSE() & 0x0000007CU) >> 2U;
+    exception_address = _CP0_GET_EPC();
+
+    while (true)
+    {
+        #if defined(__DEBUG) || defined(__DEBUG_D) && defined(__XC32)
+            __builtin_software_breakpoint();
+        #endif
+    }
+}
 /*******************************************************************************
  End of File
 */

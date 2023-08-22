@@ -33,7 +33,7 @@ void TIMER1_EventHandler(uint32_t status, uintptr_t context)
 {
     /* Toggle LED */
     GPIO_RA0_Toggle();
-} 
+}
 
 // *****************************************************************************
 // *****************************************************************************
@@ -46,7 +46,7 @@ int main ( void )
     /* Initialize all modules */
     SYS_Initialize ( NULL );
 
-    TMR1_CallbackRegister(TIMER1_EventHandler,(uintptr_t)NULL); 
+    TMR1_CallbackRegister(TIMER1_EventHandler,(uintptr_t)NULL);
     TMR1_Start();
     
     while ( true )

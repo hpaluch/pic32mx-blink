@@ -1,20 +1,22 @@
 /*******************************************************************************
- Debug Console Source file
+  Device Header File
 
   Company:
     Microchip Technology Inc.
 
   File Name:
-    xc32_monitor.c
+    device.h
 
   Summary:
-    debug console Source File
+    This file includes the selected device from within the project.
+    The device will provide access to respective device packs.
 
   Description:
     None
 
 *******************************************************************************/
 
+// DOM-IGNORE-BEGIN
 /*******************************************************************************
 * Copyright (C) 2018 Microchip Technology Inc. and its subsidiaries.
 *
@@ -37,18 +39,13 @@
 * ANY WAY RELATED TO THIS SOFTWARE WILL NOT EXCEED THE AMOUNT OF FEES, IF ANY,
 * THAT YOU HAVE PAID DIRECTLY TO MICROCHIP FOR THIS SOFTWARE.
 *******************************************************************************/
-#include <stddef.h>
+// DOM-IGNORE-END
 
-extern int read(int handle, void *buffer, unsigned int len);
-extern int write(int handle, void * buffer, size_t count);
+#ifndef DEVICE_H
+#define DEVICE_H
 
+#include <xc.h>
+#include <sys/attribs.h>
+#include "toolchain_specifics.h"
 
-int read(int handle, void *buffer, unsigned int len)
-{
-   return -1;
-}
-
-int write(int handle, void * buffer, size_t count)
-{
-   return -1;
-}
+#endif //DEVICE_H

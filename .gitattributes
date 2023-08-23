@@ -5,7 +5,7 @@
 Makefile text eol=lf
 *.c text eol=lf
 *.h text eol=lf
-*.mc3 text eol=crlf
+*.mc3 text eol=lf
 *.yml text eol=lf
 
 # binary - do not touch

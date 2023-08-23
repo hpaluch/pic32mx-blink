@@ -35,6 +35,13 @@ void TIMER1_EventHandler(uint32_t status, uintptr_t context)
     GPIO_RA0_Toggle();
 }
 
+// SYSTICK Timer interrupt, called every 1ms (1 kHz rate)
+void CORETIMER_EventHandler(uint32_t status, uintptr_t context)
+{
+    /* Toggle PIN3 RA1 at 1 kHz rate => RA1 frequency = 500 Hz */
+    GPIO_RA1_Toggle();
+}
+
 // *****************************************************************************
 // *****************************************************************************
 // Section: Main Entry Point
@@ -47,6 +54,8 @@ int main ( void )
     SYS_Initialize ( NULL );
 
     TMR1_CallbackRegister(TIMER1_EventHandler,(uintptr_t)NULL);
+    CORETIMER_CallbackSet(CORETIMER_EventHandler,(uintptr_t)NULL);
+    CORETIMER_Start();
     TMR1_Start();
     
     while ( true )

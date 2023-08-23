@@ -1704,12 +1704,12 @@
          <hash>d3d3bf6ca4d7e0f35e42cf5147573de11ac380250b5dbfac428b37caf01f1780</hash>
       </entry>
       <entry>
-         <file>..\src\config\default\device.h</file>
-         <hash>10ec93c43a7b158a129ae05bd8f4a59ff5bcf3d0f3f062fdd64c374bc2d42099</hash>
-      </entry>
-      <entry>
          <file>..\src\config\default\peripheral\clk\plib_clk.c</file>
          <hash>162881cf206ed45cbfa07171dba4035310cf8bbaa5ccf5b76de923636cc7a836</hash>
+      </entry>
+      <entry>
+         <file>..\src\config\default\device.h</file>
+         <hash>10ec93c43a7b158a129ae05bd8f4a59ff5bcf3d0f3f062fdd64c374bc2d42099</hash>
       </entry>
       <entry>
          <file>..\src\config\default\peripheral\gpio\plib_gpio.c</file>

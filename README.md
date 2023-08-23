@@ -23,8 +23,10 @@ However it is for different PIC32 CPU and also software versions are outdated.
 * [XC32 compiler][XC compilers] - tested version v4.30
 * [MPLAB X IDE][MPLAB X IDE] - tested version v6.15
   - using `PIC32MX_DFP` v1.5.259
-  - installed  [MPLAB Harmony Configurator 3 Plugin][Harmony] - tested
-    version 3.3.0.1
+  - using default MCC Plugin 5 that now also contains Harmony
+    (it used Harmony 3)
+  - official migration did not work well - manually recreated TMR1 object in MCC
+  - used this guide: https://microchipdeveloper.com/harmony3:update-and-configure-existing-mhc-proj-to-mcc-proj1
 
 NOTE: To make MPLAB X IDE at least partially usable please uncheck this:
 - Tools -> Options -> Miscellaneous -> Files -> Enable auto-scanning of sources

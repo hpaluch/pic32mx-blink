@@ -47,6 +47,8 @@ Generally we can say that MIPS32 Assembler has similar attributes as ARM:
 - this causes some issues - because CPU is 32-bit, so loading 32-bit literal
   often means that there must be used 2 instructions (1st one loads 16-bit high value, and
   2nd OR it with low 16-bit value)
+- assembler provides macro-instructions that accepts 32-bit literals and generate appropriate
+  2 instructions.
 - also literals are internally signed, so there is trickery when assembler load full 32-bit 
 - please note that there are unfortunate glossary clashes:
   - 16-bit value: dsPIC WORD = MIP32 half-word (`H` suffix)
@@ -56,6 +58,9 @@ Generally we can say that MIPS32 Assembler has similar attributes as ARM:
 WARNING! Generated code for MIPS32 interrupts may be quite inefficient when
 compared to these on dsPIC! Here is example of `void __ISR(_TIMER_1_VECTOR, ipl1SOFT) TIMER_1_Handler (void)`
 (using `xc32-objdump -S output.elf` command):
+
+This example is using so called `software instructions` mode (`ipl-x-SOFT` keyword):
+- please see `DS50002799C - 188` of `c:\Program Files\Microchip\xc32\v4.30\docs\MPLAB-XC32-Compiler-UG-PIC32M-DS-50002799.pdf`
 
 ```
 Disassembly of section .text.TIMER_1_Handler:
@@ -142,7 +147,17 @@ void __ISR(_TIMER_1_VECTOR, ipl1SOFT) TIMER_1_Handler (void)
 9d00023c:	42000018 	eret
 ```
 
-Theoretically one could use shadow registers at least for most critical interrupt.
+There are two ways how to handle more interrupts:
+- using `Shadow Set` - quickly switching to other general registers set for interrupt (similar to some dsPIC chips) - ISR using `SRS` instead of `SOFT` clause.
+- Temporal proximity interrupt coalescing - interrupts are grouped and processed by single
+  ISR (Interrupt Service Routine) - introduction is on `DS61108B-page 8-31`
+
+TODO: Here are MIPS32 resources I plan to study:
+- https://www.cs.unibo.it/~solmi/teaching/arch_2002-2003/AssemblyLanguageProgDoc.pdf
+- https://s3-eu-west-1.amazonaws.com/downloads-mips/documents/MD00016-2B-4K-SUM-01.18.pdf
+  - info on MIPS32 4K (this is version of MIPS used on PIC32MX250)
+- https://s3-eu-west-1.amazonaws.com/downloads-mips/documents/MD00086-2B-MIPS32BIS-AFP-05.04.pdf
+  - official `MIPS(R) Architecture For Programmers Volume II-A: The MIPS32® Instruction Set`
 
 ## Software requirements
 
@@ -163,6 +178,7 @@ using `xc32-objdump -S` in
 ```
 firmware\mplabproj.X\dist\default\TARGET\mplabproj.X.TARGET.lst
 ```
+
 
 [Harmony]: https://www.microchip.com/mplab/mplab-harmony
 [XC compilers]: https://www.microchip.com/mplab/compilers

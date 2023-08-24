@@ -89,10 +89,13 @@ void CLK_Initialize( void )
 
 
     /* Wait for PLL to be locked */
+    // this loop blocks in Simulator mode...
+#ifndef __MPLAB_DEBUGGER_SIMULATOR
     while(OSCCONbits.SLOCK == 0U)
                  {
                       /* Nothing to do */
                  }
+#endif
 
     /* Peripheral Module Disable Configuration */
     PMD1 = 0x1101U;

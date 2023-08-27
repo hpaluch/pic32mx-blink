@@ -126,6 +126,9 @@ void __ISR(_TIMER_1_VECTOR, ipl1SOFT) TIMER_1_Handler (void)
 ; "jump and link" equivalent of Call instruction
 ; However return address is not pushed to stack, but stored to ra register
 9d0001ac:	0f400176 	jal	9d0005d8 <TIMER_1_InterruptHandler>
+; fill "branch delay slot"
+; MIPS actually process one additional instruction placed AFTER JUMP
+; so this NOP is actually executed right before call to TIMER_1_InterruptHandler !
 9d0001b0:	00000000 	nop
 }
 ; SP := S8

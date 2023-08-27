@@ -31,31 +31,36 @@ However it is for different PIC32 CPU and also software versions are outdated.
   (included with board, should be default)
 * programming pins set `1` (Pin4 & Pin5): switch `S1` in position `A`
 
-NOTE: PIC32MX is MIPS32 based CPU with peripherals from Microchip. Please see
+NOTE: PIC32MX is `MIPS32 M4K` based CPU Core with peripherals from Microchip. Please see
 - datasheet: [PIC32MX250F128B][PIC32MX250F128B]
 - official splash page: https://www.microchip.com/en-us/products/microcontrollers-and-microprocessors/32-bit-mcus/pic32-32-bit-mcus/pic32mx
-- it is quite similar to ARM (you can even ARM from Microchip - it is SAM series coming from Atmel
+- [MIPS32 M4K Manual][MIPS32 M4K Manual] from mips.com
+- [MIPS32 M4K Core Datasheet][MIPS32 M4K DTS] from mips.com
+- [MIPS32 Instruction Set][MIPS32 BIS] from mips.com
+- [MIPS32 Instruction Set Quick Reference][MIPS32 QRC] from mips.com
+- it is quite similar to ARM (you can even buy ARM from Microchip - it is SAM series coming from Atmel
   that was acquired by Microchip).
 - MIP32 has 32-registers, they are called either `r0-r31` or using preferred names.
   For example `r0` has always 0 value and is thus also called `zero` in assembler.
-- please see MIPS32 assembler quick reference for quick overview from:
-  https://s3-eu-west-1.amazonaws.com/downloads-mips/documents/MD00565-2B-MIPS32-QRC-01.01.pdf
+- please see [MIPS32 Instruction Set Quick Reference][MIPS32 QRC]  for quick overview.
 
 Generally we can say that MIPS32 Assembler has similar attributes as ARM:
 - designed for compilers, not for manual coding
-- all instructions (at least those generated with XC32) are 32-bit wide.
+- all instructions (at least those generated with XC32) are 32-bit wide (unless you use
+  MIPS16e instructions set - possible but not default)
 - this causes some issues - because CPU is 32-bit, so loading 32-bit literal
   often means that there must be used 2 instructions (1st one loads 16-bit high value, and
   2nd OR it with low 16-bit value)
 - assembler provides macro-instructions that accepts 32-bit literals and generate appropriate
   2 instructions.
 - also literals are internally signed, so there is trickery when assembler load full 32-bit 
-- please note that there are unfortunate glossary clashes:
+- please note that there is unfortunately different meaning for Word and Double-word sizes (because
+  dsPIC is 16-bit but MIPS32 is 32-bit):
   - 16-bit value: dsPIC WORD = MIP32 half-word (`H` suffix)
   - 32-bit value: dsPIC DWORD (D) = MIPS32 word (default suffix)
   - at least Byte is same :-) (using `B` suffix on MIPS)
 
-WARNING! Generated code for MIPS32 interrupts may be quite inefficient when
+WARNING! Generated code for MIPS32 interrupts in "Software mode" may be quite inefficient when
 compared to these on dsPIC! Here is example of `void __ISR(_TIMER_1_VECTOR, ipl1SOFT) TIMER_1_Handler (void)`
 (using `xc32-objdump -S output.elf` command):
 
@@ -69,18 +74,27 @@ Disassembly of section .text.TIMER_1_Handler:
 
 void __ISR(_TIMER_1_VECTOR, ipl1SOFT) TIMER_1_Handler (void)
 {
+; copy SP from previous register set (if used)
 9d000120:	415de800 	rdpgpr	sp,sp
+; move from Coprocessor C0: k0 := EPC
 9d000124:	401a7000 	mfc0	k0,c0_epc
 9d000128:	401b6000 	mfc0	k1,c0_status
+; add immediate "unchecked": sp -= 120 ; no exception on overflow
 9d00012c:	27bdff88 	addiu	sp,sp,-120
+; store word:  [sp+116] := k0
 9d000130:	afba0074 	sw	k0,116(sp)
 9d000134:	401a6002 	mfc0	k0,c0_srsctl
 9d000138:	afbb0070 	sw	k1,112(sp)
 9d00013c:	afba006c 	sw	k0,108(sp)
+; inserts bits from 0 reg to pos 1 and length 15
+; this will zere-out bits 15 to 1 of k1 register
 9d000140:	7c1b7844 	ins	k1,zero,0x1,0xf
+; or immediate (set bit mask 0x400 of k1)
 9d000144:	377b0400 	ori	k1,k1,0x400
+; move to Coprocessor C0: C0 Status := k1
 9d000148:	409b6000 	mtc0	k1,c0_status
 ; saving general registers on stack
+; ra = return address (MIPS and ARM use dedicated register on call, not stack)
 9d00014c:	afbf005c 	sw	ra,92(sp)
 9d000150:	afbe0058 	sw	s8,88(sp)
 9d000154:	afb90054 	sw	t9,84(sp)
@@ -100,19 +114,28 @@ void __ISR(_TIMER_1_VECTOR, ipl1SOFT) TIMER_1_Handler (void)
 9d00018c:	afa3001c 	sw	v1,28(sp)
 9d000190:	afa20018 	sw	v0,24(sp)
 9d000194:	afa10014 	sw	at,20(sp)
+; move from LO (LO is lower 32-bit result of multiply:
+; v0 := LO
 9d000198:	00001012 	mflo	v0
 9d00019c:	afa20064 	sw	v0,100(sp)
+; move from HI (HI is higher 32-bit result of multiply)
 9d0001a0:	00001810 	mfhi	v1
 9d0001a4:	afa30060 	sw	v1,96(sp)
 9d0001a8:	03a0f025 	move	s8,sp
     TIMER_1_InterruptHandler();
+; "jump and link" equivalent of Call instruction
+; However return address is not pushed to stack, but stored to ra register
 9d0001ac:	0f400176 	jal	9d0005d8 <TIMER_1_InterruptHandler>
 9d0001b0:	00000000 	nop
 }
+; SP := S8
 9d0001b4:	03c0e825 	move	sp,s8
+; Load Word: v0 := [sp+100]
 9d0001b8:	8fa20064 	lw	v0,100(sp)
+; move to LO: LO := v0
 9d0001bc:	00400013 	mtlo	v0
 9d0001c0:	8fa30060 	lw	v1,96(sp)
+; move to HI: HI := v1
 9d0001c4:	00600011 	mthi	v1
 ; restoring general registers from stack
 9d0001c8:	8fbf005c 	lw	ra,92(sp)
@@ -134,7 +157,11 @@ void __ISR(_TIMER_1_VECTOR, ipl1SOFT) TIMER_1_Handler (void)
 9d000208:	8fa3001c 	lw	v1,28(sp)
 9d00020c:	8fa20018 	lw	v0,24(sp)
 9d000210:	8fa10014 	lw	at,20(sp)
+; disable interrupts
 9d000214:	41606000 	di
+; Execute Hazard Barrier
+; this instructions ensures that CPU waits until
+; all core changes are propagated and visible to next instructions
 9d000218:	000000c0 	ehb
 9d00021c:	8fba0074 	lw	k0,116(sp)
 9d000220:	8fbb0070 	lw	k1,112(sp)
@@ -142,22 +169,25 @@ void __ISR(_TIMER_1_VECTOR, ipl1SOFT) TIMER_1_Handler (void)
 9d000228:	8fba006c 	lw	k0,108(sp)
 9d00022c:	27bd0078 	addiu	sp,sp,120
 9d000230:	409a6002 	mtc0	k0,c0_srsctl
+;  Write to GPR in Previous Shadow Set
 9d000234:	41dde800 	wrpgpr	sp,sp
 9d000238:	409b6000 	mtc0	k1,c0_status
+; Exception Return (applies also for Interrupts)
 9d00023c:	42000018 	eret
 ```
 
 There are two ways how to handle more interrupts:
-- using `Shadow Set` - quickly switching to other general registers set for interrupt (similar to some dsPIC chips) - ISR using `SRS` instead of `SOFT` clause.
+- using `Shadow Set` - quickly switching to other general registers
+  set for interrupt (similar to some dsPIC chips) - ISR using `SRS` instead of `SOFT` clause.
 - Temporal proximity interrupt coalescing - interrupts are grouped and processed by single
   ISR (Interrupt Service Routine) - introduction is on `DS61108B-page 8-31`
+- please see [PIC32MX Section 11 - Interrutps][PIC32MX S11 INT] manual for many fine details
+  including brief descritpion of Interrupt Service Routines (ISRs)
 
-TODO: Here are MIPS32 resources I plan to study:
+Here are MIPS32 resources I plan to study:
 - https://www.cs.unibo.it/~solmi/teaching/arch_2002-2003/AssemblyLanguageProgDoc.pdf
-- https://s3-eu-west-1.amazonaws.com/downloads-mips/documents/MD00016-2B-4K-SUM-01.18.pdf
-  - info on MIPS32 4K (this is version of MIPS used on PIC32MX250)
-- https://s3-eu-west-1.amazonaws.com/downloads-mips/documents/MD00086-2B-MIPS32BIS-AFP-05.04.pdf
-  - official `MIPS(R) Architecture For Programmers Volume II-A: The MIPS32® Instruction Set`
+- [MIPS32 M4K Core Datasheet][MIPS32 M4K DTS]
+- [MIPS32 Instruction Set][MIPS32 BIS]
 
 ## Software requirements
 
@@ -178,8 +208,11 @@ using `xc32-objdump -S` in
 ```
 firmware\mplabproj.X\dist\default\TARGET\mplabproj.X.TARGET.lst
 ```
-
-
+[PIC32MX S11 INT]: http://ww1.microchip.com/downloads/en/DeviceDoc/61108B.pdf
+[MIPS32 M4K Manual]: https://s3-eu-west-1.amazonaws.com/downloads-mips/documents/MD00249-2B-M4K-SUM-02.03.pdf
+[MIPS32 M4K DTS]: https://s3-eu-west-1.amazonaws.com/downloads-mips/documents/MD00247-2B-M4K-DTS-02.01.pdf
+[MIPS32 BIS]: https://s3-eu-west-1.amazonaws.com/downloads-mips/documents/MD00086-2B-MIPS32BIS-AFP-05.04.pdf
+[MIPS32 QRC]: https://s3-eu-west-1.amazonaws.com/downloads-mips/documents/MD00565-2B-MIPS32-QRC-01.01.pdf 
 [Harmony]: https://www.microchip.com/mplab/mplab-harmony
 [XC compilers]: https://www.microchip.com/mplab/compilers
 [MPLAB X IDE]: https://www.microchip.com/mplab/mplab-x-ide
